@@ -1,0 +1,19 @@
+# secretos
+.env
+.env.*
+!.env.example
+*-firebase*.json
+serviceAccount*.json
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# node
+node_modules/
+.next/
+.vercel/
+
+# sistema
+.DS_Store
