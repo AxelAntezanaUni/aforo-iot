@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function miembro(orgId) {
+      return request.auth != null && request.auth.token.orgId == orgId;
+    }
+
+    match /orgs/{orgId} {
+      allow read: if miembro(orgId);
+      allow write: if false;
+    }
+
+    // la lista de usuarios solo la ve el admin de esa organizacion
+    match /orgs/{orgId}/usuarios/{uid} {
+      allow read: if miembro(orgId) && request.auth.token.rol == "admin";
+      allow write: if false;
+    }
+
+    // los hash de los tokens solo los lee la api con firebase-admin
+    match /orgs/{orgId}/secretos/{devId} {
+      allow read, write: if false;
+    }
+
+    // todo lo demas se lee solo dentro de la propia organizacion y nunca se escribe desde el cliente
+    match /orgs/{orgId}/{coleccion}/{resto=**} {
+      allow read: if miembro(orgId) && coleccion != "secretos" && coleccion != "usuarios";
+      allow write: if false;
+    }
+  }
+}
