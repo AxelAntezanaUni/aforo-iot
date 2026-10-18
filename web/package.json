@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "seed": "tsx --env-file=.env.local scripts/seed.ts"
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "reglas": "tsx --env-file=.env.local scripts/reglas.ts"
   },
   "dependencies": {
     "firebase-admin": "^14.5.0",
