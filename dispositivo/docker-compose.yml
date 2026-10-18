@@ -1,0 +1,75 @@
+# microservicios del dispositivo de aforo
+x-latido: &latido
+  test: ["CMD-SHELL", "test $$(( $$(date +%s) - $$(stat -c %Y /tmp/vivo) )) -lt 30"]
+  interval: 15s
+  timeout: 3s
+  retries: 3
+  start_period: 30s
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mosquitto-datos:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/broker/uptime", "-C", "1", "-W", "3"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  adq-ir:
+    build:
+      context: .
+      dockerfile: adq_ir/Dockerfile
+      args:
+        DEBIAN: ${DEBIAN:-bookworm}
+    restart: unless-stopped
+    devices:
+      - /dev/gpiochip0:/dev/gpiochip0
+    environment:
+      - TZ=America/Santiago
+    depends_on: [mosquitto]
+    healthcheck: *latido
+
+  adq-us:
+    build:
+      context: .
+      dockerfile: adq_us/Dockerfile
+      args:
+        DEBIAN: ${DEBIAN:-bookworm}
+    restart: unless-stopped
+    devices:
+      - /dev/gpiochip0:/dev/gpiochip0
+    environment:
+      - TZ=America/Santiago
+    depends_on: [mosquitto]
+    healthcheck: *latido
+
+  conteo:
+    build:
+      context: .
+      dockerfile: conteo/Dockerfile
+    restart: unless-stopped
+    environment:
+      - TZ=America/Santiago
+    depends_on: [mosquitto]
+    healthcheck: *latido
+
+  sync:
+    build:
+      context: .
+      dockerfile: sync/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - TZ=America/Santiago
+    volumes:
+      - sync-datos:/datos
+    depends_on: [mosquitto]
+    healthcheck: *latido
+
+volumes:
+  mosquitto-datos:
+  sync-datos:
