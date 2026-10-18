@@ -23,8 +23,6 @@ services:
     build:
       context: .
       dockerfile: adq_ir/Dockerfile
-      args:
-        DEBIAN: ${DEBIAN:-bookworm}
     restart: unless-stopped
     devices:
       - /dev/gpiochip0:/dev/gpiochip0
@@ -37,8 +35,6 @@ services:
     build:
       context: .
       dockerfile: adq_us/Dockerfile
-      args:
-        DEBIAN: ${DEBIAN:-bookworm}
     restart: unless-stopped
     devices:
       - /dev/gpiochip0:/dev/gpiochip0

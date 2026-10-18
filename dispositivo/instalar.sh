@@ -1,5 +1,5 @@
 #!/bin/bash
-# prepara la raspberry: instala docker y ajusta el .env a la version del sistema
+# prepara la raspberry: instala docker y deja el .env listo
 set -e
 cd "$(dirname "$0")"
 
@@ -23,6 +23,4 @@ if [ ! -f .env ]; then
   cp .env.example .env
   echo "complete el .env con API_URL y DEVICE_TOKEN"
 fi
-sed -i "s/^DEBIAN=.*/DEBIAN=$VERSION_CODENAME/" .env
-
 echo "listo. sal de ssh (exit) y vuelve a entrar para usar docker sin sudo"
