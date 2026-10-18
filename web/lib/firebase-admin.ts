@@ -1,11 +1,10 @@
 import { App, cert, getApps, initializeApp } from "firebase-admin/app";
-import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 
 let app: App | undefined;
 
 // inicializo recien cuando se usa, asi el build no necesita las credenciales
-function iniciar(): App {
+export function iniciar(): App {
   if (!app) {
     app =
       getApps()[0] ??
@@ -23,8 +22,4 @@ function iniciar(): App {
 
 export function db() {
   return getFirestore(iniciar());
-}
-
-export function authAdmin() {
-  return getAuth(iniciar());
 }

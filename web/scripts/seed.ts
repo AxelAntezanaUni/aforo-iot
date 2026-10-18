@@ -1,6 +1,7 @@
 // crea las organizaciones, las cuentas de prueba y el primer dispositivo
 import { FieldValue } from "firebase-admin/firestore";
-import { authAdmin, db } from "../lib/firebase-admin";
+import { db } from "../lib/firebase-admin";
+import { authAdmin } from "../lib/firebase-auth";
 import { CONFIG_INICIAL } from "../lib/config";
 import { armarToken, generarSecreto, hashSecreto } from "../lib/servicios/token";
 
