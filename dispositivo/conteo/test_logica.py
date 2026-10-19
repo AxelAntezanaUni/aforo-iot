@@ -42,21 +42,40 @@ def test_salida():
     assert c.salidas_hoy == 1
 
 
-def test_salida_con_el_brazo_adelantado_cuenta_como_salida():
-    # el brazo corta el ir antes que el cuerpo llegue al ultrasonido
+def test_salida_con_parpadeos_del_ir_al_final():
+    # al salir se corta primero el ultrasonido y despues el ir parpadea varias veces
     c = Contador()
     c.aforo = 1
     t = ms(10, 0, 10)
-    r = c.evento("ir", "corte", t)
-    r += c.evento("ir", "libre", t + 80)
-    r += c.evento("us", "corte", t + 150)
+    r = c.evento("us", "corte", t)
     r += c.evento("ir", "corte", t + 300)
-    r += c.evento("us", "libre", t + 450)
-    r += c.evento("ir", "libre", t + 600)
-    r += c.tick(t + 1000)
+    r += c.evento("ir", "libre", t + 301)
+    r += c.evento("ir", "corte", t + 303)
+    r += c.evento("ir", "libre", t + 350)
+    r += c.evento("us", "libre", t + 420)
+    r += c.tick(t + 900)
     cruces = de(r, "cruce")
     assert len(cruces) == 1
     assert cruces[0]["dir"] == "sale"
+
+
+def test_datos_reales_de_la_puerta_de_la_cocina():
+    # tiempos copiados de mosquitto_sub del 19-10 con los sensores separados:
+    # entrada: el ir parpadea y despues se corta el ultrasonido
+    c = Contador()
+    base = ms(17, 39, 26)
+    r = []
+    for dt, s, e in [(0, "ir", "corte"), (1, "ir", "libre"), (3, "ir", "corte"), (43, "ir", "libre"),
+                     (204, "us", "corte"), (538, "us", "libre")]:
+        r += c.evento(s, e, base + dt)
+    r += c.tick(base + 1000)
+    # salida: primero el ultrasonido y el ir aparece dentro de su corte
+    base2 = base + 12000
+    for dt, s, e in [(0, "us", "corte"), (19, "ir", "corte"), (20, "ir", "libre"), (74, "ir", "corte"),
+                     (75, "ir", "libre"), (469, "us", "libre")]:
+        r += c.evento(s, e, base2 + dt)
+    r += c.tick(base2 + 1000)
+    assert [x["dir"] for x in de(r, "cruce")] == ["entra", "sale"]
 
 
 def test_entrada_con_parpadeos_del_ir():

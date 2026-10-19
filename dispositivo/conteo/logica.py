@@ -29,7 +29,6 @@ class Contador:
         self.cortados = {"ir": False, "us": False}
         self.en_paso = False
         self.vistos = {}
-        self.ultimo_libre = None
         self.ultimo_cambio = 0
         self.sobre_capacidad = False
         self.ultimo_t = 0
@@ -64,25 +63,23 @@ class Contador:
             if not self.en_paso:
                 self.en_paso = True
                 self.vistos = {}
-                self.ultimo_libre = None
             if sensor not in self.vistos:
                 # si el otro sensor se corto hace mucho, no era la misma persona
                 if self.vistos and t - min(self.vistos.values()) > self.ventana_ms:
                     self.vistos = {}
                 self.vistos[sensor] = t
-        elif self.en_paso:
-            self.ultimo_libre = sensor
         self.ultimo_cambio = t
         return salida
 
     def _cerrar_paso(self):
         self.en_paso = False
         # si se corto un solo sensor alguien se asomo y se devolvio
-        if len(self.vistos) < 2 or self.ultimo_libre is None:
+        if len(self.vistos) < 2:
             return []
-        # la direccion la da el ultimo sensor que se libero: al entrar el cuerpo
-        # deja al final el ultrasonido (lado de adentro), al salir deja el ir
-        direccion = "entra" if self.ultimo_libre == "us" else "sale"
+        # la direccion la da el sensor que se corto primero: el ir esta afuera y el
+        # ultrasonido adentro. los parpadeos que vienen despues no cambian nada
+        primero = min(self.vistos, key=self.vistos.get)
+        direccion = "entra" if primero == "ir" else "sale"
         return self._contar(direccion, self.ultimo_cambio)
 
     def _contar(self, direccion, t):

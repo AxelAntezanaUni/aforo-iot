@@ -20,8 +20,8 @@ def avisar(estado):
 
 
 cliente = conectar("adq-us", ["aforo/config"], al_config)
-# promedio corto para que responda rapido
-us = DistanceSensor(echo=24, trigger=23, max_distance=2, queue_len=2, partial=True)
+# sin promedio para que responda rapido, el orden con el ir depende de esto
+us = DistanceSensor(echo=24, trigger=23, max_distance=2, queue_len=1, partial=True)
 cortado = False
 ultimo_latido = 0
 print("adq-us listo", flush=True)
@@ -40,4 +40,4 @@ while True:
     if time.time() - ultimo_latido > 5:
         latir()
         ultimo_latido = time.time()
-    time.sleep(1 / 15)
+    time.sleep(0.02)
