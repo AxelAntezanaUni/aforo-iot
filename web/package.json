@@ -12,10 +12,13 @@
     "reglas": "tsx --env-file=.env.local scripts/reglas.ts"
   },
   "dependencies": {
+    "firebase": "^13.0.0",
     "firebase-admin": "^14.5.0",
+    "jose": "^6.2.12",
     "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "recharts": "^3.10.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {
