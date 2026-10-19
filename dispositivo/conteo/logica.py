@@ -45,13 +45,13 @@ class Contador:
             self.ventana_ms = ventana_ms
 
     def restaurar(self, estado, ahora):
-        # al reiniciar recupero lo que habia, los contadores solo si es el mismo dia
-        self.aforo = estado["aforo"]
-        self.min_max = self.aforo
+        # al reiniciar recupero lo que habia, pero solo si es el mismo dia
         self.dia = dia_de(ahora)
         if dia_de(estado["t"]) == self.dia:
+            self.aforo = estado["aforo"]
             self.entradas_hoy = estado["entradasHoy"]
             self.salidas_hoy = estado["salidasHoy"]
+        self.min_max = self.aforo
 
     def tick(self, t):
         return self._avanzar(t)
@@ -134,8 +134,11 @@ class Contador:
         if self.dia is None:
             self.dia = dia
         elif dia != self.dia:
+            # a medianoche parto de cero, asi un error de direccion no se arrastra al dia siguiente
             self.dia = dia
+            self.aforo = 0
             self.entradas_hoy = 0
             self.salidas_hoy = 0
+            self.sobre_capacidad = False
             salida.append(self._estado(ahora))
         return salida

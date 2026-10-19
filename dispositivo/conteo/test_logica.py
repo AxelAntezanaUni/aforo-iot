@@ -174,9 +174,10 @@ def test_reinicio_a_medianoche():
     c = Contador()
     pasar(c, "ir", "us", ms(23, 59, 30, dia=21))
     r = c.tick(ms(0, 0, 10, dia=22))
-    assert c.entradas_hoy == 0
-    assert c.aforo == 1
-    assert de(r, "estado")[-1]["entradasHoy"] == 0
+    # a medianoche todo vuelve a 0, asi un error de direccion no se arrastra al dia siguiente
+    assert (c.aforo, c.entradas_hoy, c.salidas_hoy) == (0, 0, 0)
+    estado = de(r, "estado")[-1]
+    assert (estado["aforo"], estado["entradasHoy"]) == (0, 0)
 
 
 def test_alerta_solo_al_superar_capacidad():
@@ -211,7 +212,7 @@ def test_restaurar_mismo_dia():
     assert (c.aforo, c.entradas_hoy, c.salidas_hoy) == (4, 10, 6)
 
 
-def test_restaurar_otro_dia_solo_aforo():
+def test_restaurar_otro_dia_parte_de_cero():
     c = Contador()
     c.restaurar({"t": ms(22, 0, dia=20), "aforo": 4, "entradasHoy": 10, "salidasHoy": 6}, ms(10, 0))
-    assert (c.aforo, c.entradas_hoy, c.salidas_hoy) == (4, 0, 0)
+    assert (c.aforo, c.entradas_hoy, c.salidas_hoy) == (0, 0, 0)
