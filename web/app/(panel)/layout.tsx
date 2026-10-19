@@ -5,7 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { salir, useSesion } from "@/lib/cliente/sesion";
 
-const ENLACES = [{ href: "/dashboard", texto: "Dashboard", soloAdmin: false }];
+const ENLACES = [
+  { href: "/dashboard", texto: "Dashboard", soloAdmin: false },
+  { href: "/historico", texto: "Histórico", soloAdmin: false },
+];
 
 export default function Panel({ children }: { children: ReactNode }) {
   const { cargando, usuario, orgId, rol } = useSesion();
