@@ -8,6 +8,8 @@ import { salir, useSesion } from "@/lib/cliente/sesion";
 const ENLACES = [
   { href: "/dashboard", texto: "Dashboard", soloAdmin: false },
   { href: "/historico", texto: "Histórico", soloAdmin: false },
+  { href: "/dispositivos", texto: "Dispositivos", soloAdmin: true },
+  { href: "/usuarios", texto: "Usuarios", soloAdmin: true },
 ];
 
 export default function Panel({ children }: { children: ReactNode }) {
