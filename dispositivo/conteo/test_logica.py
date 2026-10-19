@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from logica import ZONA, Contador
+from logica import QUIETO_MS, ZONA, Contador
 
 
 def ms(h, m, s=0, dia=21):
@@ -8,12 +8,14 @@ def ms(h, m, s=0, dia=21):
 
 
 def pasar(c, primero, segundo, t, dt=300):
-    # simula una persona: corta un sensor, despues el otro, y libera los dos
+    # simula una persona: corta un sensor, despues el otro, los libera en el mismo orden
+    # y espera el tiempo de calma para que se cierre el paso
     r = []
     r += c.evento(primero, "corte", t)
     r += c.evento(segundo, "corte", t + dt)
     r += c.evento(primero, "libre", t + dt + 100)
     r += c.evento(segundo, "libre", t + dt + 300)
+    r += c.tick(t + dt + 300 + QUIETO_MS + 50)
     return r
 
 
@@ -40,13 +42,60 @@ def test_salida():
     assert c.salidas_hoy == 1
 
 
+def test_salida_con_el_brazo_adelantado_cuenta_como_salida():
+    # el brazo corta el ir antes que el cuerpo llegue al ultrasonido
+    c = Contador()
+    c.aforo = 1
+    t = ms(10, 0, 10)
+    r = c.evento("ir", "corte", t)
+    r += c.evento("ir", "libre", t + 80)
+    r += c.evento("us", "corte", t + 150)
+    r += c.evento("ir", "corte", t + 300)
+    r += c.evento("us", "libre", t + 450)
+    r += c.evento("ir", "libre", t + 600)
+    r += c.tick(t + 1000)
+    cruces = de(r, "cruce")
+    assert len(cruces) == 1
+    assert cruces[0]["dir"] == "sale"
+
+
+def test_entrada_con_parpadeos_del_ir():
+    c = Contador()
+    t = ms(10, 0, 10)
+    r = c.evento("ir", "corte", t)
+    r += c.evento("us", "corte", t + 250)
+    r += c.evento("ir", "libre", t + 300)
+    r += c.evento("ir", "corte", t + 330)
+    r += c.evento("ir", "libre", t + 360)
+    r += c.evento("us", "libre", t + 550)
+    r += c.tick(t + 1000)
+    cruces = de(r, "cruce")
+    assert len(cruces) == 1
+    assert cruces[0]["dir"] == "entra"
+
+
+def test_no_cierra_el_paso_mientras_alguien_siga_en_la_puerta():
+    c = Contador()
+    t = ms(10, 0, 10)
+    r = c.evento("ir", "corte", t)
+    r += c.evento("us", "corte", t + 200)
+    r += c.evento("ir", "libre", t + 300)
+    r += c.tick(t + 3000)
+    assert de(r, "cruce") == []
+    r += c.evento("us", "libre", t + 3100)
+    r += c.tick(t + 3500)
+    assert de(r, "cruce")[0]["dir"] == "entra"
+
+
 def test_se_devuelve_no_cuenta():
     c = Contador(ventana_ms=1500)
     t = ms(10, 0, 10)
     r = c.evento("ir", "corte", t)
     r += c.evento("ir", "libre", t + 400)
+    r += c.tick(t + 800)
     r += c.evento("us", "corte", t + 2000)
     r += c.evento("us", "libre", t + 2300)
+    r += c.tick(t + 2700)
     assert de(r, "cruce") == []
     assert c.aforo == 0
 
@@ -68,6 +117,7 @@ def test_rebote_del_mismo_sensor_no_cuenta_doble():
     r += c.evento("us", "corte", t + 300)
     r += c.evento("ir", "libre", t + 400)
     r += c.evento("us", "libre", t + 600)
+    r += c.tick(t + 1000)
     assert len(de(r, "cruce")) == 1
 
 
@@ -129,6 +179,7 @@ def test_configurar_cambia_ventana_y_capacidad():
     c = Contador()
     c.configurar(capacidad=1, ventana_ms=200)
     t = ms(10, 0, 10)
+    # el segundo sensor llega despues de la ventana: no es la misma persona
     assert de(pasar(c, "ir", "us", t, dt=500), "cruce") == []
     r = pasar(c, "ir", "us", t + 2000, dt=100) + pasar(c, "ir", "us", t + 4000, dt=100)
     assert len(de(r, "cruce")) == 2

@@ -6,7 +6,8 @@ from gpiozero import DistanceSensor
 from comun.latido import latir
 from comun.mqtt import conectar, publicar
 
-HISTERESIS_CM = 10
+# margen chico porque el marco de la puerta queda cerca del umbral
+HISTERESIS_CM = 5
 config = {"umbralCm": 60, "sensores": {"us": True}}
 
 

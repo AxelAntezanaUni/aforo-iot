@@ -3,6 +3,8 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 ZONA = ZoneInfo("America/Santiago")
+# tiempo con los dos sensores libres para dar por terminado un paso
+QUIETO_MS = 300
 
 
 def minuto_de(t):
@@ -25,8 +27,10 @@ class Contador:
         self.entradas_hoy = 0
         self.salidas_hoy = 0
         self.cortados = {"ir": False, "us": False}
-        self.primero = None
-        self.esperando_libres = False
+        self.en_paso = False
+        self.vistos = {}
+        self.ultimo_libre = None
+        self.ultimo_cambio = 0
         self.sobre_capacidad = False
         self.ultimo_t = 0
         self.dia = None
@@ -56,25 +60,30 @@ class Contador:
     def evento(self, sensor, estado, t):
         salida = self._avanzar(t)
         self.cortados[sensor] = estado == "corte"
-        if self.esperando_libres:
-            # despues de contar espero que la persona termine de pasar
-            if not any(self.cortados.values()):
-                self.esperando_libres = False
-            return salida
-        if estado != "corte":
-            return salida
-        if self.primero is None:
-            self.primero = (sensor, t)
-            return salida
-        sensor_inicial = self.primero[0]
-        if sensor == sensor_inicial:
-            return salida
-        self.primero = None
-        # si el ir se corto primero la persona venia de afuera
-        direccion = "entra" if sensor_inicial == "ir" else "sale"
-        salida += self._contar(direccion, t)
-        self.esperando_libres = True
+        if estado == "corte":
+            if not self.en_paso:
+                self.en_paso = True
+                self.vistos = {}
+                self.ultimo_libre = None
+            if sensor not in self.vistos:
+                # si el otro sensor se corto hace mucho, no era la misma persona
+                if self.vistos and t - min(self.vistos.values()) > self.ventana_ms:
+                    self.vistos = {}
+                self.vistos[sensor] = t
+        elif self.en_paso:
+            self.ultimo_libre = sensor
+        self.ultimo_cambio = t
         return salida
+
+    def _cerrar_paso(self):
+        self.en_paso = False
+        # si se corto un solo sensor alguien se asomo y se devolvio
+        if len(self.vistos) < 2 or self.ultimo_libre is None:
+            return []
+        # la direccion la da el ultimo sensor que se libero: al entrar el cuerpo
+        # deja al final el ultrasonido (lado de adentro), al salir deja el ir
+        direccion = "entra" if self.ultimo_libre == "us" else "sale"
+        return self._contar(direccion, self.ultimo_cambio)
 
     def _contar(self, direccion, t):
         if direccion == "entra":
@@ -100,8 +109,9 @@ class Contador:
 
     def _avanzar(self, t):
         salida = []
-        if self.primero is not None and t - self.primero[1] > self.ventana_ms:
-            self.primero = None
+        # el paso se cierra cuando los dos sensores llevan un rato libres
+        if self.en_paso and not any(self.cortados.values()) and t - self.ultimo_cambio >= QUIETO_MS:
+            salida += self._cerrar_paso()
         # si llega un evento atrasado no retrocedo el reloj
         ahora = max(t, self.ultimo_t)
         self.ultimo_t = ahora

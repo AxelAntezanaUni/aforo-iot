@@ -52,4 +52,5 @@ while True:
         resultados = contador.tick(ahora_ms())
     emitir(resultados)
     latir()
-    time.sleep(1)
+    # reviso seguido para cerrar los pasos apenas los sensores quedan libres
+    time.sleep(0.2)
