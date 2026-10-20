@@ -1,4 +1,5 @@
 import { procesarIngesta } from "@/lib/servicios/ingesta";
+import { ipDe } from "@/lib/servicios/limite";
 import { repoIngesta } from "@/lib/repositorios/ingesta";
 
 export async function POST(req: Request) {
@@ -8,6 +9,6 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ error: "json invalido" }, { status: 400 });
   }
-  const r = await procesarIngesta(req.headers.get("authorization"), cuerpo, repoIngesta);
+  const r = await procesarIngesta(req.headers.get("authorization"), cuerpo, repoIngesta, { ip: ipDe(req.headers) });
   return Response.json(r.body, { status: r.status });
 }

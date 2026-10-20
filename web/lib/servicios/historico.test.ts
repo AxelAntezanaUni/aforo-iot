@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { agruparPorHora, obtenerHistorico, RepoHistorico, validarRango } from "./historico";
+import { crearLimitador } from "./limite";
 
 // en octubre de 2026 chile esta en UTC-3
 const chile = (dia: number, h: number, m = 0) => Date.UTC(2026, 9, dia, h + 3, m);
@@ -82,5 +83,15 @@ describe("obtenerHistorico", () => {
     expect(r.body.totalSalidas).toBe(2);
     expect(r.body.horaPunta).toBe("2026-10-21 18");
     expect(r.body.horas).toHaveLength(24);
+  });
+
+  it("limita cuantas consultas hace cada usuario por minuto", async () => {
+    const limite = crearLimitador(2, 60_000);
+    const pedido = { devId: "puerta-1", desde: "2026-10-21", hasta: "2026-10-21" };
+    const estados = [];
+    for (let i = 0; i < 3; i++) estados.push((await obtenerHistorico(sesion, pedido, repo, limite, i)).status);
+    expect(estados).toEqual([200, 200, 429]);
+    const otro = { ...sesion, uid: "otro-usuario" };
+    expect((await obtenerHistorico(otro, pedido, repo, limite, 3)).status).toBe(200);
   });
 });

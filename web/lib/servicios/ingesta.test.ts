@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { procesarIngesta, RepoIngesta } from "./ingesta";
+import { crearLimitador } from "./limite";
 import { armarToken, hashSecreto } from "./token";
 import { CONFIG_INICIAL } from "../config";
 import { Ingesta } from "../validacion/ingesta";
@@ -42,7 +43,7 @@ describe("procesarIngesta", () => {
       estado: { t: 1760000000000, aforo: 1, entradasHoy: 1, salidasHoy: 0 },
       alertas: [{ t: 1760000000000, tipo: "capacidad", aforo: 11, capacidad: 10 }],
     };
-    const r = await procesarIngesta(HEADER, lote, repo);
+    const r = await procesarIngesta(HEADER, lote, repo, { ahora: 1760000000000 });
     expect(r.status).toBe(200);
     expect(guardados[0]).toEqual(lote);
   });
@@ -79,5 +80,43 @@ describe("procesarIngesta", () => {
     }));
     const r = await procesarIngesta(HEADER, { ...LATIDO, cruces, minutos }, repo);
     expect(r.status).toBe(400);
+  });
+
+  it("rechaza datos con una hora muy vieja o en el futuro", async () => {
+    const { repo, guardados } = repoFalso();
+    const ahora = 1760000000000;
+    const cruce = (t: number) => ({ ...LATIDO, cruces: [{ t, dir: "entra", aforo: 1 }] });
+    // 6 dias atras todavia sirve (datos que quedaron en la cola sin internet)
+    expect((await procesarIngesta(HEADER, cruce(ahora - 6 * 86_400_000), repo, { ahora })).status).toBe(200);
+    expect((await procesarIngesta(HEADER, cruce(ahora - 8 * 86_400_000), repo, { ahora })).status).toBe(400);
+    expect((await procesarIngesta(HEADER, cruce(ahora + 2 * 3_600_000), repo, { ahora })).status).toBe(400);
+    const estadoMalo = { ...LATIDO, estado: { t: 9e15, aforo: 1, entradasHoy: 1, salidasHoy: 0 } };
+    expect((await procesarIngesta(HEADER, estadoMalo, repo, { ahora })).status).toBe(400);
+    expect(guardados).toHaveLength(1);
+  });
+
+  it("corta por ip antes de leer firestore", async () => {
+    const { repo } = repoFalso();
+    let lecturas = 0;
+    const contado = { ...repo, leerTokenHash: async (o: string, d: string) => (lecturas++, repo.leerTokenHash(o, d)) };
+    const limites = { porIp: crearLimitador(2, 60_000), porDispositivo: crearLimitador(100, 60_000) };
+    const falso = "Bearer " + armarToken("biblioteca", "puerta-1", "inventado");
+    const estados = [];
+    for (let i = 0; i < 4; i++) estados.push((await procesarIngesta(falso, LATIDO, contado, { ip: "1.2.3.4", limites })).status);
+    expect(estados).toEqual([401, 401, 429, 429]);
+    expect(lecturas).toBe(2);
+    // otra ip no se ve afectada
+    expect((await procesarIngesta(HEADER, LATIDO, contado, { ip: "5.6.7.8", limites })).status).toBe(200);
+  });
+
+  it("corta un dispositivo que manda demasiados pedidos", async () => {
+    const { repo, guardados } = repoFalso();
+    const limites = { porIp: crearLimitador(100, 60_000), porDispositivo: crearLimitador(3, 60_000) };
+    const estados = [];
+    for (let i = 0; i < 5; i++) estados.push((await procesarIngesta(HEADER, LATIDO, repo, { ahora: i * 1000, limites })).status);
+    expect(estados).toEqual([200, 200, 200, 429, 429]);
+    expect(guardados).toHaveLength(3);
+    // al minuto siguiente vuelve a pasar
+    expect((await procesarIngesta(HEADER, LATIDO, repo, { ahora: 61_000, limites })).status).toBe(200);
   });
 });

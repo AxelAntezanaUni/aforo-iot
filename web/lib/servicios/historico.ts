@@ -1,5 +1,6 @@
 import { Respuesta } from "./ingesta";
 import { Sesion } from "./sesion";
+import { crearLimitador, Limitador } from "./limite";
 
 export type Cruce = { t: number; dir: "entra" | "sale" };
 export type Minuto = { t: number; entradas: number; salidas: number };
@@ -77,8 +78,18 @@ export type RepoHistorico = {
 
 type Pedido = { devId: string; desde: string; hasta: string };
 
-export async function obtenerHistorico(sesion: Sesion | null, pedido: Pedido, repo: RepoHistorico): Promise<Respuesta> {
+// una consulta de 7 dias puede leer miles de documentos, asi que limito cuantas hace cada usuario
+const LIMITE: Limitador = crearLimitador(20, 60_000);
+
+export async function obtenerHistorico(
+  sesion: Sesion | null,
+  pedido: Pedido,
+  repo: RepoHistorico,
+  limite: Limitador = LIMITE,
+  ahora = Date.now(),
+): Promise<Respuesta> {
   if (!sesion) return { status: 401, body: { error: "sesion invalida" } };
+  if (!limite(sesion.uid, ahora)) return { status: 429, body: { error: "demasiadas consultas, espera un momento" } };
   if (!/^[a-z0-9-]+$/.test(pedido.devId)) return { status: 400, body: { error: "dispositivo invalido" } };
   const rango = validarRango(pedido.desde, pedido.hasta);
   if (!rango) return { status: 400, body: { error: "rango de fechas invalido (maximo 7 dias)" } };

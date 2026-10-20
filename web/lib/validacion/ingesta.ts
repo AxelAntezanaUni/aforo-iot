@@ -29,3 +29,18 @@ export const esquemaIngesta = z
   });
 
 export type Ingesta = z.infer<typeof esquemaIngesta>;
+
+// la cola de la raspberry guarda datos mientras no hay internet, por eso acepto hasta 7 dias hacia atras;
+// hacia adelante solo un margen chico por si el reloj de la raspberry esta algo corrido
+export const ATRAS_MS = 7 * 24 * 3_600_000;
+export const ADELANTE_MS = 3_600_000;
+
+export function horasEnRango(lote: Ingesta, ahora: number): boolean {
+  const horas = [
+    ...lote.cruces.map((c) => c.t),
+    ...lote.minutos.map((m) => m.t),
+    ...lote.alertas.map((a) => a.t),
+    ...(lote.estado ? [lote.estado.t] : []),
+  ];
+  return horas.every((t) => t >= ahora - ATRAS_MS && t <= ahora + ADELANTE_MS);
+}
