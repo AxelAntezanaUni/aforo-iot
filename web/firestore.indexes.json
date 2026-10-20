@@ -1,13 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "alertas",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "devId", "order": "ASCENDING" },
-        { "fieldPath": "t", "order": "DESCENDING" }
-      ]
-    }
-  ],
+  "indexes": [],
   "fieldOverrides": []
 }

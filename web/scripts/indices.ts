@@ -32,6 +32,8 @@ async function main() {
   }
 
   const deseados: Indice[] = JSON.parse(readFileSync("firestore.indexes.json", "utf8")).indexes;
+  // las consultas actuales filtran u ordenan por un solo campo, asi que bastan los indices automaticos
+  if (deseados.length === 0) console.log("no hay indices compuestos que crear");
   for (const ind of deseados) {
     const f = firma(ind.collectionGroup, ind.fields);
     if (existentes.has(f)) {

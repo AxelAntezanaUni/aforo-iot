@@ -37,11 +37,13 @@ El Echo del HC-SR04 entrega 5 V y los pines GPIO trabajan a 3,3 V, por eso pasa 
 |---|---|---|---|
 | `mosquitto` | Broker MQTT, solo en la red interna de Docker | | |
 | `adq-ir` | Lee el infrarrojo y publica cada corte y liberación con su hora | `aforo/eventos/ir` | `aforo/config` |
-| `adq-us` | Lee el ultrasonido unas 15 veces por segundo y avisa cuando algo baja del umbral | `aforo/eventos/us` | `aforo/config` |
+| `adq-us` | Lee el ultrasonido cada 20 ms y avisa cuando algo baja del umbral (con 5 cm de histéresis) | `aforo/eventos/us` | `aforo/config` |
 | `conteo` | Cruza los eventos, decide entrada o salida, lleva el aforo, agrega por minuto y detecta la capacidad superada | `aforo/cruce`, `aforo/minuto`, `aforo/estado`, `aforo/alerta` | `aforo/eventos/#`, `aforo/config` |
 | `sync` | Guarda todo en una cola SQLite, lo envía por lotes a la API y trae la configuración | `aforo/config` | los cuatro de `conteo` |
 
 Todos tienen reinicio automático y healthcheck, y el sistema parte solo al encender la Raspberry. Si se corta internet, `sync` guarda lo pendiente y lo reenvía al volver, sin duplicados (cada documento tiene un id que sale de su hora).
+
+**Cómo decide `conteo` la dirección.** Un paso empieza con el primer corte y termina cuando los dos sensores llevan 300 ms libres; manda el sensor que se cortó primero. El ultrasonido avisa más tarde que el infrarrojo, así que antes de comparar se le resta un retraso (`RETARDO_US_MS` en `docker-compose.yml`, 165 ms por defecto, calibrado con pasadas reales). Se puede cambiar sin reconstruir la imagen: editar el valor y correr `docker compose up -d conteo`. Si se desactiva un sensor desde la web, el conteo se detiene, porque un paso necesita los dos (sirve para mantención).
 
 ## Modelo de datos (Firestore)
 
@@ -57,6 +59,15 @@ orgs/{orgId}/alertas/{devId-t}                 devId, tipo, aforo, capacidad, t
 ```
 
 Todo cuelga de la organización, así las Security Rules (`web/firestore.rules`) aíslan cada organización con una sola condición. El rol y la organización van como claims en el token del usuario. Desde el navegador no se escribe nada: todas las escrituras pasan por la API.
+
+**Índices.** Todas las consultas filtran u ordenan por un solo campo, así que bastan los índices automáticos de Firestore y no hay índices compuestos (`web/firestore.indexes.json` queda vacío a propósito):
+
+| Consulta | Dónde | Índice que usa |
+|---|---|---|
+| Últimas 5 alertas de la organización (`orderBy t desc, limit 5`) | dashboard | automático de `alertas.t` |
+| Cruces de un rango (`t >= desde, t < hasta`) | histórico | automático de `cruces.t` |
+| Minutos de un rango (`t >= desde, t < hasta`) | histórico | automático de `minutos.t` |
+| Colecciones `dispositivos`, `estado` y `usuarios` completas | dashboard y gestión | ninguno (se leen enteras) |
 
 ## API
 
@@ -141,7 +152,7 @@ SEED_CLAVE_LAB=...
 ```bash
 npm run seed      # organizaciones, cuentas de prueba y el dispositivo puerta-1 (muestra su token una vez)
 npm run reglas    # publica firestore.rules
-npm run indices   # crea los indices de firestore.indexes.json (si la cuenta no tiene permiso, crearlos en la consola)
+npm run indices   # crea los indices compuestos de firestore.indexes.json (hoy no hay ninguno)
 npm test          # pruebas de la api
 ```
 
@@ -165,14 +176,15 @@ bash instalar.sh            # instala docker y lo deja partiendo con la raspberr
 exit                        # salir y volver a entrar por ssh
 docker compose up -d --build
 docker compose ps           # los 5 servicios deben quedar healthy
+swapon --show               # revisar que la raspberry tenga swap (lo pide el enunciado)
 ```
 
 ## Pruebas
 
 ```bash
-cd web && npm test                                 # api: tokens, ingesta, sesion, historico, dispositivos
-cd dispositivo/conteo && python3 -m pytest -q      # logica de conteo
-cd dispositivo/sync && python3 -m pytest -q        # cola y armado de lotes
+cd web && npm test                                 # api: tokens, ingesta, limites, sesion, historico, dispositivos (40)
+cd dispositivo/conteo && python3 -m pytest -q      # logica de conteo, con tiempos reales (20)
+cd dispositivo/sync && python3 -m pytest -q        # cola y armado de lotes (8)
 ```
 
 ## Seguridad
