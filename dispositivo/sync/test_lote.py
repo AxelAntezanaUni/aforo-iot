@@ -43,3 +43,29 @@ def test_lote_vacio():
     assert cuerpo == {"latido": True, "cruces": [], "minutos": [], "estado": None, "alertas": []}
     assert borrar == []
     assert not tiene_datos(cuerpo)
+
+
+def test_modo_minuto_el_estado_de_medianoche_viaja_con_el_latido():
+    # a medianoche conteo publica el estado en cero sin ningun cruce ni minuto
+    items = [(1, "estado", {"t": 1, "aforo": 0, "entradasHoy": 0, "salidasHoy": 0})]
+    cuerpo, borrar = armar_lote(items, "minuto", True)
+    assert cuerpo["estado"]["aforo"] == 0
+    assert borrar == [1]
+    # sin latido sigue esperando, asi no se gasta un envio extra
+    cuerpo, borrar = armar_lote(items, "minuto", False)
+    assert cuerpo["estado"] is None
+    assert borrar == []
+
+
+def test_modo_minuto_con_cruces_el_estado_espera_su_minuto():
+    # si hay cruces esperando, el estado va con el minuto y no con el latido
+    items = [it for it in items_de_prueba() if it[1] in ("cruce", "estado")]
+    cuerpo, _ = armar_lote(items, "minuto", True)
+    assert cuerpo["estado"] is None
+
+
+def test_maximo_20_alertas_por_lote():
+    items = [(i, "alerta", {"t": i, "tipo": "capacidad", "aforo": 11, "capacidad": 10}) for i in range(1, 26)]
+    cuerpo, borrar = armar_lote(items, "evento", False)
+    assert len(cuerpo["alertas"]) == 20
+    assert borrar == list(range(1, 21))
