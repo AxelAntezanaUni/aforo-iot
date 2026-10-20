@@ -20,12 +20,13 @@ def inicio_minuto(clave):
 
 
 class Contador:
-    def __init__(self, capacidad=10, ventana_ms=1500, retardo_us_ms=100):
+    def __init__(self, capacidad=10, ventana_ms=1500, retardo_us_ms=165):
         self.capacidad = capacidad
         self.ventana_ms = ventana_ms
-        # el ultrasonido avisa unos 100 ms despues de que alguien entra a su cono y el ir casi al
-        # instante; con los sensores juntos las salidas se veian como entradas, asi que para
-        # decidir quien se corto primero le resto ese retraso al ultrasonido
+        # el ultrasonido avisa mas tarde que el ir; con los sensores juntos las salidas se veian
+        # como entradas, asi que para decidir quien se corto primero le resto ese retraso.
+        # 165 ms sale de 40 pasadas reales del 20-10: en las entradas el ultrasonido llego
+        # entre 172 y 537 ms despues del ir, y en las salidas entre 35 y 164 ms
         self.retardo_us_ms = retardo_us_ms
         self.aforo = 0
         self.entradas_hoy = 0

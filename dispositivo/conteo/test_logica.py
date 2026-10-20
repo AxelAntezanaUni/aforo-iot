@@ -196,7 +196,8 @@ def test_alerta_solo_al_superar_capacidad():
 
 
 def test_configurar_cambia_ventana_y_capacidad():
-    c = Contador()
+    # sin retraso, para que la ventana se mida con los tiempos tal cual
+    c = Contador(retardo_us_ms=0)
     c.configurar(capacidad=1, ventana_ms=200)
     t = ms(10, 0, 10)
     # el segundo sensor llega despues de la ventana: no es la misma persona
@@ -229,21 +230,28 @@ def pasada_real(c, primero, t_primero, t_segundo, t):
     return de(r, "cruce")
 
 
-def test_salida_con_el_ultrasonido_atrasado():
-    # al salir la persona llega primero al ultrasonido, pero este avisa ~100 ms tarde y el ir
-    # (45 ms despues) gana: por mqtt llega primero el ir. Restando el retraso queda como salida
-    c = Contador()
-    c.aforo = 1
-    assert pasada_real(c, "ir", 45, 100, ms(10, 0, 10))[0]["dir"] == "sale"
+# diferencias reales (ms) entre el corte del ultrasonido y el del ir, prueba de 40 pasadas del 20-10
+ENTRADAS_REALES = [172, 173, 205, 243, 271, 283, 394, 453, 537]
+SALIDAS_REALES = [35, 58, 82, 99, 107, 149, 164]
 
 
-def test_entrada_con_el_ultrasonido_atrasado():
-    # al entrar el ir se corta en 0 y el ultrasonido en 45 + 100 de retraso
-    c = Contador()
-    assert pasada_real(c, "ir", 0, 145, ms(10, 0, 10))[0]["dir"] == "entra"
+def test_salidas_reales_con_el_ultrasonido_atrasado():
+    # al salir la persona llega primero al ultrasonido, pero este avisa tarde y el ir gana:
+    # por mqtt llega primero el ir. Restando el retraso queda como salida
+    for d in SALIDAS_REALES:
+        c = Contador()
+        c.aforo = 1
+        assert pasada_real(c, "ir", 0, d, ms(10, 0, 10))[0]["dir"] == "sale", d
 
 
-def test_sin_compensar_la_salida_sale_como_entrada():
-    # lo que pasaba antes del cambio (prueba de 40 pasadas del 20-10: 2 de 20 salidas bien)
-    c = Contador(retardo_us_ms=0)
-    assert pasada_real(c, "ir", 45, 100, ms(10, 0, 10))[0]["dir"] == "entra"
+def test_entradas_reales_siguen_siendo_entradas():
+    for d in ENTRADAS_REALES:
+        c = Contador()
+        assert pasada_real(c, "ir", 0, d, ms(10, 0, 10))[0]["dir"] == "entra", d
+
+
+def test_sin_compensar_las_salidas_salen_como_entradas():
+    # lo que pasaba antes del cambio (prueba del 20-10 sin compensar: 1-2 de 20 salidas bien)
+    for d in SALIDAS_REALES:
+        c = Contador(retardo_us_ms=0)
+        assert pasada_real(c, "ir", 0, d, ms(10, 0, 10))[0]["dir"] == "entra", d

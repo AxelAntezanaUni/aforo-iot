@@ -10,7 +10,7 @@ from logica import Contador
 TEMAS = {"cruce": "aforo/cruce", "minuto": "aforo/minuto", "estado": "aforo/estado", "alerta": "aforo/alerta"}
 
 # el retraso del ultrasonido se puede ajustar en docker-compose.yml sin reconstruir la imagen
-contador = Contador(retardo_us_ms=int(os.environ.get("RETARDO_US_MS", "100")))
+contador = Contador(retardo_us_ms=int(os.environ.get("RETARDO_US_MS", "165")))
 candado = threading.Lock()
 restaurado = False
 
