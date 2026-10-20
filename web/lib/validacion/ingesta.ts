@@ -5,7 +5,17 @@ const entero = z.number().int().nonnegative();
 export const esquemaIngesta = z
   .object({
     latido: z.boolean(),
-    cruces: z.array(z.object({ t: entero, dir: z.enum(["entra", "sale"]), aforo: entero })).max(400),
+    cruces: z
+      .array(
+        z.object({
+          t: entero,
+          dir: z.enum(["entra", "sale"]),
+          aforo: entero,
+          // cuanto despues del ir se corto el ultrasonido (opcional para no romper dispositivos viejos)
+          dtMs: z.number().int().min(-5000).max(5000).optional(),
+        }),
+      )
+      .max(400),
     minutos: z
       .array(
         z.object({

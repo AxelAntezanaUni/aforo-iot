@@ -25,6 +25,7 @@ export const repoIngesta: RepoIngesta = {
         dir: c.dir,
         aforo: c.aforo,
         t: Timestamp.fromMillis(c.t),
+        ...(c.dtMs !== undefined && { dtMs: c.dtMs }),
       });
     }
     for (const m of lote.minutos) {

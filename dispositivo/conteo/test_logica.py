@@ -255,3 +255,16 @@ def test_sin_compensar_las_salidas_salen_como_entradas():
     for d in SALIDAS_REALES:
         c = Contador(retardo_us_ms=0)
         assert pasada_real(c, "ir", 0, d, ms(10, 0, 10))[0]["dir"] == "entra", d
+
+
+def test_el_cruce_guarda_cuanto_despues_del_ir_se_corto_el_ultrasonido():
+    # el dato de los dos sensores queda en el cruce, con la hora real (sin restar el retraso)
+    c = Contador()
+    entrada = pasada_real(c, "ir", 0, 205, ms(10, 0, 10))[0]
+    assert (entrada["dir"], entrada["dtMs"]) == ("entra", 205)
+    c.aforo = 1
+    salida = pasada_real(c, "ir", 0, 99, ms(10, 0, 20))[0]
+    assert (salida["dir"], salida["dtMs"]) == ("sale", 99)
+    # si el ultrasonido se corta antes que el ir, la diferencia es negativa
+    c.aforo = 1
+    assert pasada_real(c, "us", 0, 60, ms(10, 0, 30))[0]["dtMs"] == -60

@@ -34,6 +34,8 @@ class Contador:
         self.cortados = {"ir": False, "us": False}
         self.en_paso = False
         self.vistos = {}
+        # hora real del primer corte de cada sensor, sin restar el retraso
+        self.crudos = {}
         self.ultimo_cambio = 0
         self.sobre_capacidad = False
         self.ultimo_t = 0
@@ -68,12 +70,15 @@ class Contador:
             if not self.en_paso:
                 self.en_paso = True
                 self.vistos = {}
+                self.crudos = {}
             if sensor not in self.vistos:
                 t_real = t - self.retardo_us_ms if sensor == "us" else t
                 # si el otro sensor se corto hace mucho, no era la misma persona
                 if self.vistos and t_real - min(self.vistos.values()) > self.ventana_ms:
                     self.vistos = {}
+                    self.crudos = {}
                 self.vistos[sensor] = t_real
+                self.crudos[sensor] = t
         self.ultimo_cambio = t
         return salida
 
@@ -86,9 +91,12 @@ class Contador:
         # ultrasonido adentro. los parpadeos que vienen despues no cambian nada
         primero = min(self.vistos, key=self.vistos.get)
         direccion = "entra" if primero == "ir" else "sale"
-        return self._contar(direccion, self.ultimo_cambio)
+        # cuanto despues del ir se corto el ultrasonido: queda en firestore como dato de los dos sensores
+        # y sirve para revisar el retraso con las pasadas reales
+        dt = self.crudos["us"] - self.crudos["ir"]
+        return self._contar(direccion, self.ultimo_cambio, dt)
 
-    def _contar(self, direccion, t):
+    def _contar(self, direccion, t, dt=None):
         if direccion == "entra":
             self.aforo += 1
             self.entradas_hoy += 1
@@ -98,7 +106,10 @@ class Contador:
             self.salidas_hoy += 1
             self.min_salidas += 1
         self.min_max = max(self.min_max, self.aforo)
-        salida = [{"tema": "cruce", "t": t, "dir": direccion, "aforo": self.aforo}, self._estado(t)]
+        cruce = {"tema": "cruce", "t": t, "dir": direccion, "aforo": self.aforo}
+        if dt is not None:
+            cruce["dtMs"] = dt
+        salida = [cruce, self._estado(t)]
         if self.aforo > self.capacidad:
             if not self.sobre_capacidad:
                 self.sobre_capacidad = True

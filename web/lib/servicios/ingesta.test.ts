@@ -119,4 +119,17 @@ describe("procesarIngesta", () => {
     // al minuto siguiente vuelve a pasar
     expect((await procesarIngesta(HEADER, LATIDO, repo, { ahora: 61_000, limites })).status).toBe(200);
   });
+
+  it("acepta el dato de los dos sensores en cada cruce y sigue aceptando cruces sin el", async () => {
+    const { repo, guardados } = repoFalso();
+    const ahora = 1760000000000;
+    const conDt = { ...LATIDO, cruces: [{ t: ahora, dir: "entra", aforo: 1, dtMs: 205 }] };
+    const sinDt = { ...LATIDO, cruces: [{ t: ahora, dir: "sale", aforo: 0 }] };
+    expect((await procesarIngesta(HEADER, conDt, repo, { ahora })).status).toBe(200);
+    expect((await procesarIngesta(HEADER, sinDt, repo, { ahora })).status).toBe(200);
+    expect(guardados[0].cruces[0].dtMs).toBe(205);
+    expect(guardados[1].cruces[0].dtMs).toBeUndefined();
+    const raro = { ...LATIDO, cruces: [{ t: ahora, dir: "entra", aforo: 1, dtMs: 99999 }] };
+    expect((await procesarIngesta(HEADER, raro, repo, { ahora })).status).toBe(400);
+  });
 });

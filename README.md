@@ -53,7 +53,7 @@ orgs/{orgId}/usuarios/{uid}                    email, rol
 orgs/{orgId}/dispositivos/{devId}              nombre, config, activo, ultimaConexion
 orgs/{orgId}/secretos/{devId}                  tokenHash (no se puede leer desde el navegador)
 orgs/{orgId}/estado/{devId}                    aforo, entradasHoy, salidasHoy, actualizado
-orgs/{orgId}/dispositivos/{devId}/cruces/{t}   dir, aforo, t        (modo evento)
+orgs/{orgId}/dispositivos/{devId}/cruces/{t}   dir, aforo, t, dtMs  (modo evento; dtMs = cuánto después del IR se cortó el ultrasonido)
 orgs/{orgId}/dispositivos/{devId}/minutos/{AAAAMMDDHHmm}  entradas, salidas, aforoFin, aforoMax, t  (modo minuto)
 orgs/{orgId}/alertas/{devId-t}                 devId, tipo, aforo, capacidad, t
 ```
