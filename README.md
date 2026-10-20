@@ -17,7 +17,7 @@ Navegador  --historico y gestion-->  API                                    |
 Navegador  <------------- aforo en vivo (onSnapshot) -----------------------+
 ```
 
-Los dos sensores van en el marco de la puerta, separados unos 20 cm en la dirección de paso: el infrarrojo hacia afuera y el ultrasónico hacia adentro. Si se corta primero el infrarrojo y después el ultrasónico, la persona entró; al revés, salió.
+Los dos sensores van en el marco de la puerta, uno después del otro en la dirección de paso: el infrarrojo hacia afuera y el ultrasónico hacia adentro. Si se corta primero el infrarrojo y después el ultrasónico, la persona entró; al revés, salió. Lo ideal es separarlos 30-40 cm; en el montaje de prueba quedaron a 5-6 cm por el largo de los cables, y con esa distancia algunas salidas se cuentan como entradas (por eso el aforo vuelve a cero a medianoche).
 
 La Raspberry solo abre conexiones salientes por HTTPS y nunca tiene credenciales de administrador de Firebase. Se identifica ante la API con un token propio que se puede revocar desde la web.
 
