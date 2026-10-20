@@ -91,7 +91,7 @@ curl "https://aforo-iot.vercel.app/api/historico?devId=puerta-1&desde=2026-10-21
 
 Respuesta: `{"horas":[{"hora":"2026-10-21 00","entradas":0,"salidas":0},...],"totalEntradas":42,"totalSalidas":40,"horaPunta":"2026-10-21 13"}`
 
-Errores: `401` token o sesión inválida, `403` sin permiso, `404` el dispositivo no existe en tu organización, `400` datos inválidos, `409` id repetido.
+Errores: `401` token o sesión inválida, `403` sin permiso, `404` el dispositivo no existe en tu organización, `400` datos inválidos (incluye datos con una hora de hace más de 7 días o de más de 1 hora en el futuro), `409` id repetido, `429` demasiados pedidos (más de 120 por minuto desde una IP, 30 por minuto por dispositivo o 20 consultas al histórico por minuto por usuario).
 
 ## Cuentas de prueba
 
@@ -182,3 +182,5 @@ cd dispositivo/sync && python3 -m pytest -q        # cola y armado de lotes
 - Security Rules por organización y rol; el navegador no puede escribir.
 - La Raspberry no abre puertos: el broker MQTT solo existe dentro de la red de Docker.
 - Sin secretos en el repo: `.env`, `.env.local` y la clave de la cuenta de servicio están en `.gitignore`.
+- Límite de pedidos por IP, por dispositivo y por usuario, para que un token robado no agote la cuota diaria de Firestore.
+- Encabezados de seguridad en la web: no se puede meter en un iframe de otro sitio (`frame-ancestors 'none'`), `nosniff` y `Referrer-Policy`.
