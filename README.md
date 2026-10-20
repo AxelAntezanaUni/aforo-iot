@@ -158,7 +158,7 @@ npm test          # pruebas de la api
 
 ### 3. Vercel (plan Hobby)
 
-Importar el repo desde GitHub con **Root Directory** `web` y cargar las variables `FIREBASE_*` y `NEXT_PUBLIC_FIREBASE_*`. Cada push a `main` despliega solo. Las funciones corren en São Paulo (`web/vercel.json`).
+Importar el repo desde GitHub con **Root Directory** `web` y cargar las variables `FIREBASE_*` y `NEXT_PUBLIC_FIREBASE_*`. Las `NEXT_PUBLIC_FIREBASE_*` hacen falta también al compilar: sin ellas `npm run build` falla con `auth/invalid-api-key`. Cada push a `main` despliega solo. Las funciones corren en São Paulo (`web/vercel.json`).
 
 ### 4. Raspberry Pi
 
