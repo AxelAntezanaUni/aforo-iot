@@ -216,3 +216,34 @@ def test_restaurar_otro_dia_parte_de_cero():
     c = Contador()
     c.restaurar({"t": ms(22, 0, dia=20), "aforo": 4, "entradasHoy": 10, "salidasHoy": 6}, ms(10, 0))
     assert (c.aforo, c.entradas_hoy, c.salidas_hoy) == (0, 0, 0)
+
+
+def pasada_real(c, primero, t_primero, t_segundo, t):
+    # una pasada con los tiempos tal como llegan por mqtt, sensores a 5-6 cm
+    otro = "us" if primero == "ir" else "ir"
+    r = c.evento(primero, "corte", t + t_primero)
+    r += c.evento(otro, "corte", t + t_segundo)
+    r += c.evento("ir", "libre", t + t_segundo + 40)
+    r += c.evento("us", "libre", t + t_segundo + 350)
+    r += c.tick(t + t_segundo + 350 + QUIETO_MS + 50)
+    return de(r, "cruce")
+
+
+def test_salida_con_el_ultrasonido_atrasado():
+    # al salir la persona llega primero al ultrasonido, pero este avisa ~100 ms tarde y el ir
+    # (45 ms despues) gana: por mqtt llega primero el ir. Restando el retraso queda como salida
+    c = Contador()
+    c.aforo = 1
+    assert pasada_real(c, "ir", 45, 100, ms(10, 0, 10))[0]["dir"] == "sale"
+
+
+def test_entrada_con_el_ultrasonido_atrasado():
+    # al entrar el ir se corta en 0 y el ultrasonido en 45 + 100 de retraso
+    c = Contador()
+    assert pasada_real(c, "ir", 0, 145, ms(10, 0, 10))[0]["dir"] == "entra"
+
+
+def test_sin_compensar_la_salida_sale_como_entrada():
+    # lo que pasaba antes del cambio (prueba de 40 pasadas del 20-10: 2 de 20 salidas bien)
+    c = Contador(retardo_us_ms=0)
+    assert pasada_real(c, "ir", 45, 100, ms(10, 0, 10))[0]["dir"] == "entra"

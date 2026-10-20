@@ -20,9 +20,13 @@ def inicio_minuto(clave):
 
 
 class Contador:
-    def __init__(self, capacidad=10, ventana_ms=1500):
+    def __init__(self, capacidad=10, ventana_ms=1500, retardo_us_ms=100):
         self.capacidad = capacidad
         self.ventana_ms = ventana_ms
+        # el ultrasonido avisa unos 100 ms despues de que alguien entra a su cono y el ir casi al
+        # instante; con los sensores juntos las salidas se veian como entradas, asi que para
+        # decidir quien se corto primero le resto ese retraso al ultrasonido
+        self.retardo_us_ms = retardo_us_ms
         self.aforo = 0
         self.entradas_hoy = 0
         self.salidas_hoy = 0
@@ -64,10 +68,11 @@ class Contador:
                 self.en_paso = True
                 self.vistos = {}
             if sensor not in self.vistos:
+                t_real = t - self.retardo_us_ms if sensor == "us" else t
                 # si el otro sensor se corto hace mucho, no era la misma persona
-                if self.vistos and t - min(self.vistos.values()) > self.ventana_ms:
+                if self.vistos and t_real - min(self.vistos.values()) > self.ventana_ms:
                     self.vistos = {}
-                self.vistos[sensor] = t
+                self.vistos[sensor] = t_real
         self.ultimo_cambio = t
         return salida
 

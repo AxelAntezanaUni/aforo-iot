@@ -50,6 +50,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=America/Santiago
+      - RETARDO_US_MS=100
     depends_on: [mosquitto]
     healthcheck: *latido
 
